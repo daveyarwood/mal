@@ -1,5 +1,4 @@
-use std::io;
-use std::io::Write;
+extern crate linenoise;
 
 fn read(input: String) -> String {
   input
@@ -19,14 +18,12 @@ fn rep(input: String) -> String {
 
 fn main() {
   loop {
-    print!("user> ");
-    io::stdout().flush().unwrap();
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("failed to read line");
-    let input = input.trim();
-
-    println!("{}", rep(input.to_string()));
-    // io::stdout().flush().unwrap();
+    match linenoise::input("user> ") {
+      None => { break; }
+      Some(input) => {
+        linenoise::history_add(input.as_ref());
+        println!("{}", rep(input));
+      }
+    }
   }
 }
