@@ -5,3 +5,4 @@ authors = ["Dave Yarwood <dave.yarwood@gmail.com>"]
 
 [dependencies]
 linenoise-rust = "0.2.0"
+regex          = "0.1"
