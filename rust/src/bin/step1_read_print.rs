@@ -1,7 +1,9 @@
 extern crate linenoise;
 
+use mal::reader;
+
 fn read(input: String) -> String {
-  input
+  reader::read_str(input)
 }
 
 fn eval(code: String) -> String {
