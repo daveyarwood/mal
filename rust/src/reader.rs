@@ -18,7 +18,12 @@ impl Reader {
     }
 
     fn peek(&mut self) -> Option<String> {
-        Some(self.tokens[self.position].to_owned())
+        if self.position < self.tokens.len() {
+            let ref token = self.tokens[self.position];
+            Some(token.to_owned())
+        } else {
+            None
+        }
     }
 }
 
