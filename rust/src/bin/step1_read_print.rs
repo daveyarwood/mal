@@ -1,4 +1,5 @@
 extern crate linenoise;
+extern crate mal;
 
 use mal::reader;
 
