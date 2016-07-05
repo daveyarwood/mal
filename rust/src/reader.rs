@@ -42,7 +42,12 @@ fn tokenize(input: String) -> Vec<String> {
 
 fn read_atom(reader: &mut Reader) -> MalVal {
     let token = reader.next().expect("Expected an atom, but got EOF.");
-    MalVal::Atom(token)
+    if Regex::new(r"^-?\d+$").unwrap().is_match(&token) {
+        let n = token.parse().expect("Error parsing integer.");
+        MalVal::Int(n)
+    } else {
+        MalVal::Atom(token)
+    }
 }
 
 fn read_list(reader: &mut Reader) -> MalVal {
