@@ -1,6 +1,7 @@
 extern crate linenoise;
 extern crate mal;
 
+use mal::printer;
 use mal::reader;
 use mal::types::MalVal;
 
@@ -11,12 +12,12 @@ fn read(input: String) -> MalVal {
     }
 }
 
-fn eval(form: MalVal) -> String {
-    "TODO: eval form".to_string()
+fn eval(form: MalVal) -> MalVal {
+    form
 }
 
-fn print(result: String) -> String {
-    result
+fn print(result: MalVal) -> String {
+    printer::pr_str(&result)
 }
 
 fn rep(input: String) -> String {
