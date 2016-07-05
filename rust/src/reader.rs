@@ -1,4 +1,5 @@
 use regex::Regex;
+use types::MalVal;
 
 struct Reader {
     tokens: Vec<String>,
@@ -16,7 +17,7 @@ impl Reader {
         }
     }
 
-    fn peek(self) -> Option<String> {
+    fn peek(&mut self) -> Option<String> {
         Some(self.tokens[self.position].to_owned())
     }
 }
@@ -34,16 +35,48 @@ fn tokenize(input: String) -> Vec<String> {
     results
 }
 
-fn read_form(reader: Reader) -> String {
+fn read_atom(reader: &mut Reader) -> MalVal {
+    let token = reader.next().expect("Expected an atom, but got EOF.");
+    MalVal::Atom(token)
+}
+
+fn read_list(reader: &mut Reader) -> MalVal {
+    // Make sure the first token is "("
+    let first_token = reader.next().expect("Expected '(', but got EOF.");
+    assert!(first_token == "(", "A list must start with '('.");
+
+    let mut list = Vec::<MalVal>::new();
+
+    loop {
+        // Throw an exception if there's no more input and the list hasn't been
+        // closed.
+        let token = reader.peek().expect("Expected ')', but got EOF.");
+
+        if &token == ")" {
+            reader.next();
+            break;
+        } else {
+            let form = read_form(reader).unwrap();
+            list.push(form);
+        }
+    }
+
+    MalVal::List(list)
+}
+
+fn read_form(reader: &mut Reader) -> Option<MalVal> {
     let token = reader.peek().unwrap();
     match &token as &str {
-        "(" => "left paren".to_string(),
-        _   => "???".to_string()
+        "(" => Some(read_list(reader)),
+        _   => Some(read_atom(reader))
     }
 }
 
-pub fn read_str(input: String) -> String {
+pub fn read_str(input: String) -> Result<MalVal, String> {
     let tokens = tokenize(input);
-    let mut reader = Reader{tokens: tokens, position: 0};
-    read_form(reader)
+    let reader = &mut Reader{tokens: tokens, position: 0};
+    match read_form(reader) {
+        Some(form) => Ok(form),
+        None       => Err("Invalid input.".to_string())
+    }
 }
