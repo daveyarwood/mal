@@ -1,5 +1,6 @@
 use regex::Regex;
 use types::MalVal;
+use util;
 
 struct Reader {
     tokens: Vec<String>,
@@ -45,6 +46,9 @@ fn read_atom(reader: &mut Reader) -> MalVal {
     if Regex::new(r"^-?\d+$").unwrap().is_match(&token) {
         let n = token.parse().expect("Error parsing integer.");
         MalVal::Int(n)
+    } else if Regex::new(r#"^".*"$"#).unwrap().is_match(&token) {
+        let string = util::unescape(&token[1..token.len()-1]);
+        MalVal::String(string)
     } else {
         MalVal::Atom(token)
     }
