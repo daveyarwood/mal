@@ -50,34 +50,51 @@ fn read_atom(reader: &mut Reader) -> MalVal {
     }
 }
 
-fn read_list(reader: &mut Reader) -> MalVal {
-    // Make sure the first token is "("
-    let first_token = reader.next().expect("Expected '(', but got EOF.");
-    assert!(first_token == "(", "A list must start with '('.");
+fn read_seq(reader: &mut Reader, type_name: &str,
+            start_token: &str, end_token: &str) -> Vec<MalVal> {
+    // Make sure the first token is right
+    let first_token = reader.next()
+                            .expect(&format!("Expected '{}', but got EOF.",
+                                             start_token));
+    assert!(first_token == start_token,
+            format!("A {} must start with '{}'.", type_name, start_token));
 
-    let mut list = Vec::<MalVal>::new();
+    let mut seq = Vec::<MalVal>::new();
 
     loop {
         // Throw an exception if there's no more input and the list hasn't been
         // closed.
-        let token = reader.peek().expect("Expected ')', but got EOF.");
+        let token = reader.peek()
+                          .expect(&format!("Expected '{}', but got EOF.",
+                                           end_token));
 
-        if &token == ")" {
+        if &token == end_token {
             reader.next();
             break;
         } else {
             let form = read_form(reader).unwrap();
-            list.push(form);
+            seq.push(form);
         }
     }
 
+    seq
+}
+
+fn read_list(reader: &mut Reader) -> MalVal {
+    let list = read_seq(reader, "list", "(", ")");
     MalVal::List(list)
+}
+
+fn read_vector(reader: &mut Reader) -> MalVal {
+    let vec = read_seq(reader, "vector", "[", "]");
+    MalVal::Vector(vec)
 }
 
 fn read_form(reader: &mut Reader) -> Option<MalVal> {
     let token = reader.peek().unwrap();
     match &token as &str {
         "(" => Some(read_list(reader)),
+        "[" => Some(read_vector(reader)),
         _   => Some(read_atom(reader))
     }
 }
