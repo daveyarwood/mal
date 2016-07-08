@@ -3,6 +3,7 @@
 .mal-history
 .crystal
 .lein
+.nrepl*
 .m2
 .ivy2
 .sbt

@@ -49,6 +49,12 @@ fn read_atom(reader: &mut Reader) -> MalVal {
     } else if Regex::new(r#"^".*"$"#).unwrap().is_match(&token) {
         let string = util::unescape(&token[1..token.len()-1]);
         MalVal::String(string)
+    } else if token == "nil" {
+        MalVal::Nil
+    } else if token == "true" {
+        MalVal::Boolean(true)
+    } else if token == "false" {
+        MalVal::Boolean(false)
     } else {
         MalVal::Atom(token)
     }
