@@ -41,22 +41,22 @@ fn tokenize(input: String) -> Vec<String> {
     results
 }
 
-fn read_atom(reader: &mut Reader) -> MalVal {
+fn read_atom(reader: &mut Reader) -> Result<MalVal, String> {
     let token = reader.next().expect("Expected an atom, but got EOF.");
     if Regex::new(r"^-?\d+$").unwrap().is_match(&token) {
         let n = token.parse().expect("Error parsing integer.");
-        MalVal::Int(n)
+        Ok(MalVal::Int(n))
     } else if Regex::new(r#"^".*"$"#).unwrap().is_match(&token) {
         let string = util::unescape(&token[1..token.len()-1]);
-        MalVal::String(string)
+        Ok(MalVal::String(string))
     } else if token == "nil" {
-        MalVal::Nil
+        Ok(MalVal::Nil)
     } else if token == "true" {
-        MalVal::Boolean(true)
+        Ok(MalVal::Boolean(true))
     } else if token == "false" {
-        MalVal::Boolean(false)
+        Ok(MalVal::Boolean(false))
     } else {
-        MalVal::Atom(token)
+        Ok(MalVal::Atom(token))
     }
 }
 
@@ -107,13 +107,34 @@ fn read_vector(reader: &mut Reader) -> Result<MalVal, String> {
     }
 }
 
+fn read_prefixed_form(reader: &mut Reader, type_name: &str, symbol_name: &str,
+                      start_token: &str) -> Result<MalVal, String> {
+    // Make sure the first token is right
+    let first_token = reader.next()
+                            .expect(&format!("Expected '{}', but got EOF.",
+                                             start_token));
+    assert!(first_token == start_token,
+            format!("A(n) {} must start with '{}'.", type_name, start_token));
+
+    match read_form(reader) {
+        Ok(Some(form)) => Ok(MalVal::List(vec![MalVal::Atom(symbol_name.to_string()), form])),
+        Ok(None)       => Err(format!("Invalid {}.", type_name)),
+        Err(msg)       => Err(msg)
+    }
+}
+
 fn read_form_starting_at(token: String, reader: &mut Reader) -> Result<MalVal, String> {
     match &token as &str {
-        "(" => read_list(reader),
-        "[" => read_vector(reader),
-        ")" => Err("Unexpected end of list ')'.".to_string()),
-        "]" => Err("Unexpected end of vector ']'.".to_string()),
-        _   => Ok(read_atom(reader))
+        "("  => read_list(reader),
+        "["  => read_vector(reader),
+        ")"  => Err("Unexpected end of list ')'.".to_string()),
+        "]"  => Err("Unexpected end of vector ']'.".to_string()),
+        "'"  => read_prefixed_form(reader, "quoted form", "quote", "'"),
+        "`"  => read_prefixed_form(reader, "quasiquoted form", "quasiquote", "`"),
+        "~"  => read_prefixed_form(reader, "unquoted form", "unquote", "~"),
+        "~@" => read_prefixed_form(reader, "splice-unquoted form", "splice-unquote", "~@"),
+        "@"  => read_prefixed_form(reader, "dereferenced form", "deref", "@"),
+        _    => read_atom(reader)
     }
 }
 
