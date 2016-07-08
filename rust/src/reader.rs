@@ -85,8 +85,12 @@ fn read_seq(reader: &mut Reader, type_name: &str,
                 break;
             } else {
                 match read_form(reader) {
-                    Ok(hopefully_form) => seq.push(hopefully_form.unwrap()),
-                    Err(msg)           => return Err(msg)
+                    Ok(maybe_form) => if maybe_form.is_none() {
+                                         reader.next();
+                                      } else {
+                                          seq.push(maybe_form.unwrap());
+                                      },
+                    Err(msg)       => return Err(msg)
                 }
             }
         }
@@ -156,30 +160,36 @@ fn read_form_with_metadata(reader: &mut Reader) -> Result<MalVal, String> {
 }
 
 fn read_form_starting_at(token: String,
-                         reader: &mut Reader) -> Result<MalVal, String> {
-    match &token as &str {
-        "("  => read_list(reader),
-        "["  => read_vector(reader),
-        "{"  => read_hashmap(reader),
-        ")"  => Err("Unexpected end of list ')'.".to_string()),
-        "]"  => Err("Unexpected end of vector ']'.".to_string()),
-        "}"  => Err("Unexpected end of hash-map '}'.".to_string()),
-        "'"  => read_prefixed_form(reader, "quoted form", "quote", "'"),
-        "`"  => read_prefixed_form(reader, "quasiquoted form", "quasiquote", "`"),
-        "~"  => read_prefixed_form(reader, "unquoted form", "unquote", "~"),
-        "~@" => read_prefixed_form(reader, "splice-unquoted form", "splice-unquote", "~@"),
-        "@"  => read_prefixed_form(reader, "dereferenced form", "deref", "@"),
-        "^"  => read_form_with_metadata(reader),
-        _    => read_atom(reader)
+                         reader: &mut Reader) -> Result<Option<MalVal>, String> {
+    if Regex::new(r#"^;.*$"#).unwrap().is_match(&token) {
+        Ok(None)
+    } else {
+        let form = match &token as &str {
+            "("  => read_list(reader),
+            "["  => read_vector(reader),
+            "{"  => read_hashmap(reader),
+            ")"  => Err("Unexpected end of list ')'.".to_string()),
+            "]"  => Err("Unexpected end of vector ']'.".to_string()),
+            "}"  => Err("Unexpected end of hash-map '}'.".to_string()),
+            "'"  => read_prefixed_form(reader, "quoted form", "quote", "'"),
+            "`"  => read_prefixed_form(reader, "quasiquoted form", "quasiquote", "`"),
+            "~"  => read_prefixed_form(reader, "unquoted form", "unquote", "~"),
+            "~@" => read_prefixed_form(reader, "splice-unquoted form", "splice-unquote", "~@"),
+            "@"  => read_prefixed_form(reader, "dereferenced form", "deref", "@"),
+            "^"  => read_form_with_metadata(reader),
+            _    => read_atom(reader)
+        };
+
+        match form {
+            Ok(value) => Ok(Some(value)),
+            Err(msg)  => Err(msg)
+        }
     }
 }
 
 fn read_form(reader: &mut Reader) -> Result<Option<MalVal>, String> {
     match reader.peek() {
-        Some(token) => match read_form_starting_at(token, reader) {
-            Ok(value) => Ok(Some(value)),
-            Err(msg)  => Err(msg)
-        },
+        Some(token) => read_form_starting_at(token, reader),
         None        => Ok(None)
     }
 }
