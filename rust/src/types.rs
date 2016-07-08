@@ -3,6 +3,7 @@ pub enum MalVal {
     Boolean(bool),
     Error(String),
     Int(isize),
+    Keyword(String),
     List(Vec<MalVal>),
     Nil,
     String(String),
