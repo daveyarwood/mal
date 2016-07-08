@@ -5,19 +5,22 @@ use mal::printer;
 use mal::reader;
 use mal::types::MalVal;
 
-fn read(input: String) -> MalVal {
+fn read(input: String) -> Option<MalVal> {
     match reader::read_str(input) {
         Ok(form) => form,
         Err(msg) => panic!(msg)
     }
 }
 
-fn eval(form: MalVal) -> MalVal {
+fn eval(form: Option<MalVal>) -> Option<MalVal> {
     form
 }
 
-fn print(result: MalVal) -> String {
-    printer::pr_str(&result)
+fn print(result: Option<MalVal>) -> String {
+    match result {
+        Some(form) => printer::pr_str(&form),
+        None       => String::new()
+    }
 }
 
 fn rep(input: String) -> String {

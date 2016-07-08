@@ -94,20 +94,23 @@ fn read_vector(reader: &mut Reader) -> MalVal {
     MalVal::Vector(vec)
 }
 
-fn read_form(reader: &mut Reader) -> Option<MalVal> {
-    let token = reader.peek().unwrap();
+fn read_starting_at(token: String, reader: &mut Reader) -> MalVal {
     match &token as &str {
-        "(" => Some(read_list(reader)),
-        "[" => Some(read_vector(reader)),
-        _   => Some(read_atom(reader))
+        "(" => read_list(reader),
+        "[" => read_vector(reader),
+        _   => read_atom(reader)
     }
 }
 
-pub fn read_str(input: String) -> Result<MalVal, String> {
+fn read_form(reader: &mut Reader) -> Option<MalVal> {
+    reader.peek().and_then(|token| Some(read_starting_at(token, reader)))
+}
+
+pub fn read_str(input: String) -> Result<Option<MalVal>, String> {
     let tokens = tokenize(input);
     let reader = &mut Reader{tokens: tokens, position: 0};
     match read_form(reader) {
-        Some(form) => Ok(form),
-        None       => Err("Invalid input.".to_string())
+        Some(form) => Ok(Some(form)),
+        None       => Ok(None)
     }
 }
