@@ -8,7 +8,7 @@ use mal::types::MalVal;
 fn read(input: String) -> Option<MalVal> {
     match reader::read_str(input) {
         Ok(form) => form,
-        Err(msg) => panic!(msg)
+        Err(msg) => Some(MalVal::Error(msg))
     }
 }
 
