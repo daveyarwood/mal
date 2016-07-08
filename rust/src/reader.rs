@@ -138,7 +138,25 @@ fn read_prefixed_form(reader: &mut Reader, type_name: &str, symbol_name: &str,
     }
 }
 
-fn read_form_starting_at(token: String, reader: &mut Reader) -> Result<MalVal, String> {
+fn read_form_with_metadata(reader: &mut Reader) -> Result<MalVal, String> {
+    // Make sure the first token is right
+    let first_token = reader.next().expect("Expected '^', but got EOF.");
+    assert!(first_token == "^", "A form with metadata must start with '^'.");
+
+    match read_form(reader) {
+        Ok(Some(MalVal::HashMap(metadata))) => match read_form(reader) {
+            Ok(Some(form)) => Ok(MalVal::List(vec![MalVal::Atom("with-meta".to_string()), form, MalVal::HashMap(metadata)])),
+            Ok(None)       => return Err("Can't attach metadata to nothing.".to_string()),
+            Err(msg)       => return Err(msg)
+        },
+        Ok(Some(_)) => return Err("Metadata must be a hash-map.".to_string()),
+        Ok(None)              => return Err("Invalid use of '^'.".to_string()),
+        Err(msg) => return Err(msg)
+    }
+}
+
+fn read_form_starting_at(token: String,
+                         reader: &mut Reader) -> Result<MalVal, String> {
     match &token as &str {
         "("  => read_list(reader),
         "["  => read_vector(reader),
@@ -151,6 +169,7 @@ fn read_form_starting_at(token: String, reader: &mut Reader) -> Result<MalVal, S
         "~"  => read_prefixed_form(reader, "unquoted form", "unquote", "~"),
         "~@" => read_prefixed_form(reader, "splice-unquoted form", "splice-unquote", "~@"),
         "@"  => read_prefixed_form(reader, "dereferenced form", "deref", "@"),
+        "^"  => read_form_with_metadata(reader),
         _    => read_atom(reader)
     }
 }
