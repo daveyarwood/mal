@@ -19,6 +19,10 @@ fn vector_to_str(vec: &Vec<MalVal>) -> String {
     seq_to_str(vec, "[", "]")
 }
 
+fn hashmap_to_str(map: &Vec<MalVal>) -> String {
+    seq_to_str(map, "{", "}")
+}
+
 fn string_to_str(string: &str) -> String {
     format!("\"{}\"", util::escape(string))
 }
@@ -36,6 +40,7 @@ pub fn pr_str(form: &MalVal) -> String {
         MalVal::Atom(ref atom)     => atom.to_owned(),
         MalVal::Boolean(boolean)   => bool_to_str(boolean),
         MalVal::Error(ref string)  => format!("ERROR: {}", string),
+        MalVal::HashMap(ref map)   => hashmap_to_str(map),
         MalVal::Int(n)             => n.to_string(),
         MalVal::Keyword(ref kw)    => format!(":{}", kw),
         MalVal::List(ref list)     => list_to_str(list),

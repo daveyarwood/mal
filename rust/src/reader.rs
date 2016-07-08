@@ -109,6 +109,19 @@ fn read_vector(reader: &mut Reader) -> Result<MalVal, String> {
     }
 }
 
+fn read_hashmap(reader: &mut Reader) -> Result<MalVal, String> {
+    let contents = read_seq(reader, "hash-map", "{", "}");
+
+    // TODO: store contents in an associative data structure;
+    //       validate even number of forms;
+    //       only allow certain kinds of keys?
+
+    match contents {
+        Ok(map)  => Ok(MalVal::HashMap(map)),
+        Err(msg) => Err(msg)
+    }
+}
+
 fn read_prefixed_form(reader: &mut Reader, type_name: &str, symbol_name: &str,
                       start_token: &str) -> Result<MalVal, String> {
     // Make sure the first token is right
@@ -129,8 +142,10 @@ fn read_form_starting_at(token: String, reader: &mut Reader) -> Result<MalVal, S
     match &token as &str {
         "("  => read_list(reader),
         "["  => read_vector(reader),
+        "{"  => read_hashmap(reader),
         ")"  => Err("Unexpected end of list ')'.".to_string()),
         "]"  => Err("Unexpected end of vector ']'.".to_string()),
+        "}"  => Err("Unexpected end of hash-map '}'.".to_string()),
         "'"  => read_prefixed_form(reader, "quoted form", "quote", "'"),
         "`"  => read_prefixed_form(reader, "quasiquoted form", "quasiquote", "`"),
         "~"  => read_prefixed_form(reader, "unquoted form", "unquote", "~"),
