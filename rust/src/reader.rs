@@ -74,43 +74,40 @@ fn read_seq(reader: &mut Reader, type_name: &str,
     let mut seq = Vec::<MalVal>::new();
 
     loop {
-        let token = reader.peek();
-        if token.is_none() {
+        match reader.peek() {
             // Throw an exception if there's no more input and the list hasn't
             // been closed.
-            return Err(format!("Expected '{}', but got EOF.", end_token));
-        } else {
-            if &token.unwrap() == end_token {
+            None => {
+                return Err(format!("Expected '{}', but got EOF.", end_token))
+            },
+            // If the next token is the token that ends the seq, move ahead and
+            // break.
+            Some(ref token) if token == end_token => {
                 reader.next();
                 break;
-            } else {
+            },
+            // If it's anything else, read the next form and add it to the seq.
+            Some(_) => {
                 match read_form(reader) {
-                    Ok(maybe_form) => if maybe_form.is_none() {
-                                         reader.next();
-                                      } else {
-                                          seq.push(maybe_form.unwrap());
-                                      },
-                    Err(msg)       => return Err(msg)
-                }
+                    Err(msg)       => { return Err(msg); },
+                    Ok(None)       => { reader.next(); },
+                    Ok(Some(form)) => { seq.push(form); }
+                };
             }
-        }
-    }
+        };
+    };
 
     Ok(seq)
 }
 
 fn read_list(reader: &mut Reader) -> Result<MalVal, String> {
-    match read_seq(reader, "list", "(", ")") {
-        Ok(list) => Ok(MalVal::List(list)),
-        Err(msg) => Err(msg)
-    }
+    read_seq(reader, "list", "(", ")")
+        .map(|list| MalVal::List(list))
 }
 
 fn read_vector(reader: &mut Reader) -> Result<MalVal, String> {
-    match read_seq(reader, "vector", "[", "]") {
-        Ok(vec)  => Ok(MalVal::Vector(vec)),
-        Err(msg) => Err(msg)
-    }
+    read_seq(reader, "vector", "[", "]")
+        .map(|vec| MalVal::Vector(vec))
 }
 
 fn read_hashmap(reader: &mut Reader) -> Result<MalVal, String> {
@@ -136,7 +133,10 @@ fn read_prefixed_form(reader: &mut Reader, type_name: &str, symbol_name: &str,
             format!("A(n) {} must start with '{}'.", type_name, start_token));
 
     match read_form(reader) {
-        Ok(Some(form)) => Ok(MalVal::List(vec![MalVal::Atom(symbol_name.to_string()), form])),
+        Ok(Some(form)) => {
+            let symbol = MalVal::Atom(symbol_name.to_string());
+            Ok(MalVal::List(vec![symbol, form]))
+        },
         Ok(None)       => Err(format!("Invalid {}.", type_name)),
         Err(msg)       => Err(msg)
     }
@@ -148,21 +148,29 @@ fn read_form_with_metadata(reader: &mut Reader) -> Result<MalVal, String> {
     assert!(first_token == "^", "A form with metadata must start with '^'.");
 
     match read_form(reader) {
-        Ok(Some(MalVal::HashMap(metadata))) => match read_form(reader) {
-            Ok(Some(form)) => Ok(MalVal::List(vec![MalVal::Atom("with-meta".to_string()), form, MalVal::HashMap(metadata)])),
-            Ok(None)       => return Err("Can't attach metadata to nothing.".to_string()),
-            Err(msg)       => return Err(msg)
+        Ok(Some(MalVal::HashMap(metadata))) => {
+            match read_form(reader) {
+                Ok(Some(form)) => {
+                    let with_meta = MalVal::Atom("with-meta".to_string());
+                    let meta      = MalVal::HashMap(metadata);
+                    Ok(MalVal::List(vec![with_meta, form, meta]))
+                },
+                Ok(None)       => return Err("Can't attach metadata to nothing.".to_string()),
+                Err(msg)       => return Err(msg)
+            }
         },
         Ok(Some(_)) => return Err("Metadata must be a hash-map.".to_string()),
-        Ok(None)              => return Err("Invalid use of '^'.".to_string()),
-        Err(msg) => return Err(msg)
+        Ok(None)    => return Err("Invalid use of '^'.".to_string()),
+        Err(msg)    => return Err(msg)
     }
 }
 
 fn read_form_starting_at(token: String,
                          reader: &mut Reader) -> Result<Option<MalVal>, String> {
+    // If the current token is a comment, return None
     if Regex::new(r#"^;.*$"#).unwrap().is_match(&token) {
         Ok(None)
+    // Otherwise, read a form starting from the token
     } else {
         let form = match &token as &str {
             "("  => read_list(reader),
@@ -180,10 +188,7 @@ fn read_form_starting_at(token: String,
             _    => read_atom(reader)
         };
 
-        match form {
-            Ok(value) => Ok(Some(value)),
-            Err(msg)  => Err(msg)
-        }
+        form.map(|value| Some(value))
     }
 }
 

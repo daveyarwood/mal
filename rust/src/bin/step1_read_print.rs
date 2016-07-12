@@ -6,10 +6,7 @@ use mal::reader;
 use mal::types::MalVal;
 
 fn read(input: String) -> Option<MalVal> {
-    match reader::read_str(input) {
-        Ok(form) => form,
-        Err(msg) => Some(MalVal::Error(msg))
-    }
+    reader::read_str(input).unwrap_or_else(|msg| Some(MalVal::Error(msg)))
 }
 
 fn eval(form: Option<MalVal>) -> Option<MalVal> {
