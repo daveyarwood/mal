@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use types::MalVal;
 use util;
 
@@ -19,8 +20,11 @@ fn vector_to_str(vec: &Vec<MalVal>) -> String {
     seq_to_str(vec, "[", "]")
 }
 
-fn hashmap_to_str(map: &Vec<MalVal>) -> String {
-    seq_to_str(map, "{", "}")
+fn hashmap_to_str(map: &HashMap<MalVal, MalVal>) -> String {
+    map.iter()
+       .map(|(k, v)| format!("{} {}", pr_str(k), pr_str(v)))
+       .collect::<Vec<String>>()
+       .join(", ")
 }
 
 fn string_to_str(string: &str) -> String {

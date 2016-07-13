@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::collections::HashMap;
 use types::MalVal;
 use util;
 
@@ -111,15 +112,16 @@ fn read_vector(reader: &mut Reader) -> Result<MalVal, String> {
 }
 
 fn read_hashmap(reader: &mut Reader) -> Result<MalVal, String> {
-    let contents = read_seq(reader, "hash-map", "{", "}");
-
-    // TODO: store contents in an associative data structure;
-    //       validate even number of forms;
-    //       only allow certain kinds of keys?
-
-    match contents {
-        Ok(map)  => Ok(MalVal::HashMap(map)),
-        Err(msg) => Err(msg)
+    match read_seq(reader, "hash-map", "{", "}") {
+        Err(msg) => Err(msg),
+        Ok(contents) => {
+            if contents.len() % 2 == 0 {
+                let map = HashMap::new();
+                Ok(MalVal::HashMap(map))
+            } else {
+                Err("A hash-map must contain an even number of forms.".to_string())
+            }
+        }
     }
 }
 
